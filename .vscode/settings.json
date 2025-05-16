@@ -1,0 +1,11 @@
+{
+    "editor.codeActionsOnSave": {
+
+    },
+    "explorer.sideBarPosition": "left",
+    "explorer.fontSize": 12,
+    "nerdtree.alwaysShowSidebar": false,
+    "editor.fontSize": 12,
+    "terminal.integrated.fontSize": 12,
+    "workbench.sideBar.fontSize": 12,
+}

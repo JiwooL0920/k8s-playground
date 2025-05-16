@@ -1,0 +1,55 @@
+# N8n configuration for local development on Kubernetes
+main:
+  config:
+    n8n:
+      hide_usage_page: false  # Show usage page for learning
+    db:
+      type: sqlite  # Using SQLite for simplicity
+  secret:
+    n8n:
+      encryption_key: "change-this-to-a-random-secure-key"  # Used to encrypt credentials
+  resources:
+    limits:
+      memory: 2048Mi
+      cpu: "1"
+    requests:
+      memory: 512Mi
+      cpu: "0.2"
+  service:
+    type: NodePort
+    port: 5678
+    # Specify the nodePort to match our kind configuration
+    nodePort: 30678
+  # Add persistence for workflows and data
+  persistence:
+    enabled: true
+    size: 1Gi
+    storageClass: standard
+
+# You can enable ingress if you want to access n8n through a hostname
+ingress:
+  enabled: false
+  # If you want to enable ingress, uncomment and modify these settings
+  # annotations:
+  #   kubernetes.io/ingress.class: nginx
+  # hosts:
+  #   - host: n8n.local
+  #     paths:
+  #       - path: /
+  #         pathType: Prefix
+
+# We're using the default deployment type with a single instance
+# For production, you might want to enable worker, webhook, etc.
+worker:
+  enabled: false
+
+webhook:
+  enabled: false
+
+# Redis is not required for our simple setup
+valkey:
+  enabled: false
+
+# Disable PostgreSQL since we're using SQLite
+postgresql:
+  enabled: false 
