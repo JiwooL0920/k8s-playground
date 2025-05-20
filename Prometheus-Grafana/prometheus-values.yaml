@@ -1,0 +1,33 @@
+server:
+  global:
+    scrape_interval: 15s
+    evaluation_interval: 15s
+  persistentVolume:
+    enabled: true
+    size: 8Gi
+  service:
+    type: NodePort
+    nodePort: 30090
+
+alertmanager:
+  enabled: true
+  persistentVolume:
+    enabled: true
+    size: 2Gi
+
+nodeExporter:
+  enabled: true
+
+pushgateway:
+  enabled: true
+
+serviceAccounts:
+  server:
+    create: true
+    name: prometheus-server
+  alertmanager:
+    create: true
+  nodeExporter:
+    create: true
+  pushgateway:
+    create: true 
