@@ -21,6 +21,7 @@ This project creates a simple nginx web server that can be deployed to multiple 
 - **Traefik** as a modern ingress controller
 - **IngressRoute** (Traefik CRD) for advanced routing capabilities
 - **Kind** cluster for local development
+- **Namespace isolation** using the 'nginx' namespace for all application resources
 
 ## Why This Architecture
 
@@ -116,21 +117,29 @@ kubectl get svc -n traefik
 ### 3. Deploy Development Environment
 
 ```bash
-# Apply dev configuration
+# The Makefile automatically creates the nginx namespace and applies dev configuration
+make dev-up
+
+# Or manually:
+kubectl create namespace nginx
 kubectl apply -k overlays/dev
 
 # Verify dev deployment
-kubectl get pods,svc,ingressroute
+kubectl get pods,svc,ingressroute -n nginx
 ```
 
 ### 4. Deploy UAT Environment
 
 ```bash
-# Apply UAT configuration
+# The Makefile automatically creates the nginx namespace and applies UAT configuration
+make uat-up
+
+# Or manually:
+kubectl create namespace nginx
 kubectl apply -k overlays/uat
 
 # Verify both environments
-kubectl get pods,svc,ingressroute
+kubectl get pods,svc,ingressroute -n nginx
 ```
 
 ### 5. Setup Port Forwarding
@@ -173,14 +182,17 @@ With everything set up, you can now test both environments:
 ### Verification Commands
 
 ```bash
-# Check all running pods
-kubectl get pods
+# Check all running pods in nginx namespace
+kubectl get pods -n nginx
 
-# Check service endpoints
-kubectl get endpoints
+# Check service endpoints in nginx namespace
+kubectl get endpoints -n nginx
 
-# Check IngressRoute status
-kubectl get ingressroute
+# Check IngressRoute status in nginx namespace
+kubectl get ingressroute -n nginx
+
+# Check all resources in nginx namespace
+kubectl get all -n nginx
 
 # View Traefik dashboard (if enabled)
 kubectl port-forward -n traefik svc/traefik 9000:9000
@@ -194,13 +206,21 @@ kubectl port-forward -n traefik svc/traefik 9000:9000
 ```bash
 # Remove dev environment
 kubectl delete -k overlays/dev
+# Or: make dev-down
 
 # Remove UAT environment  
 kubectl delete -k overlays/uat
+# Or: make uat-down
+
+# Remove nginx namespace (this will delete all resources in it)
+kubectl delete namespace nginx
 
 # Remove Traefik (optional)
 helm uninstall traefik -n traefik
 kubectl delete namespace traefik
+
+# Complete cleanup using Makefile
+make clean-all
 ```
 
 ### Clean up /etc/hosts
@@ -235,6 +255,7 @@ sudo sed -i '' '/uat-nginx.example.com/d' /etc/hosts
 #### `base/kustomization.yaml`
 - Lists all resources to include in the base
 - Defines common labels applied to all resources
+- **Sets namespace**: All resources will be created in the 'nginx' namespace
 - **Deprecated warnings**: Kustomize recommends newer syntax
 
 ### Overlay Configuration Files

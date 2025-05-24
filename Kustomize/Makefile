@@ -43,6 +43,7 @@ help:
 
 # Variables
 TRAEFIK_NAMESPACE = traefik
+NGINX_NAMESPACE = nginx
 TRAEFIK_CHART = traefik/traefik
 TRAEFIK_VALUES = traefik-values.yaml
 
@@ -66,10 +67,12 @@ setup-traefik:
 # Deploy development environment
 dev-up:
 	@echo "🔧 Deploying development environment..."
+	@echo "Creating nginx namespace..."
+	kubectl create namespace $(NGINX_NAMESPACE) --dry-run=client -o yaml | kubectl apply -f -
 	kubectl apply -k overlays/dev
 	@echo "✅ Development environment deployed!"
 	@echo "Checking pod status..."
-	kubectl get pods -l environment=dev
+	kubectl get pods -n $(NGINX_NAMESPACE) -l environment=dev
 	@echo ""
 	@echo "📋 Next steps:"
 	@echo "  1. Run 'make port-forward' in another terminal"
@@ -84,10 +87,12 @@ dev-down:
 # Deploy UAT environment
 uat-up:
 	@echo "🔧 Deploying UAT environment..."
+	@echo "Creating nginx namespace..."
+	kubectl create namespace $(NGINX_NAMESPACE) --dry-run=client -o yaml | kubectl apply -f -
 	kubectl apply -k overlays/uat
 	@echo "✅ UAT environment deployed!"
 	@echo "Checking pod status..."
-	kubectl get pods -l environment=uat
+	kubectl get pods -n $(NGINX_NAMESPACE) -l environment=uat
 	@echo ""
 	@echo "📋 Next steps:"
 	@echo "  1. Run 'make port-forward' in another terminal"
@@ -137,16 +142,16 @@ status:
 	kubectl get pods,svc -n $(TRAEFIK_NAMESPACE)
 	@echo ""
 	@echo "=== Application Pods ==="
-	kubectl get pods
+	kubectl get pods -n $(NGINX_NAMESPACE)
 	@echo ""
 	@echo "=== Services ==="
-	kubectl get svc
+	kubectl get svc -n $(NGINX_NAMESPACE)
 	@echo ""
 	@echo "=== IngressRoutes ==="
-	kubectl get ingressroute
+	kubectl get ingressroute -n $(NGINX_NAMESPACE)
 	@echo ""
 	@echo "=== Endpoints ==="
-	kubectl get endpoints
+	kubectl get endpoints -n $(NGINX_NAMESPACE)
 
 # Preview what would be deployed (without applying)
 preview-dev:
@@ -160,11 +165,11 @@ preview-uat:
 # Check logs
 logs-dev:
 	@echo "📋 Development environment logs..."
-	kubectl logs -l environment=dev --tail=50
+	kubectl logs -n $(NGINX_NAMESPACE) -l environment=dev --tail=50
 
 logs-uat:
 	@echo "📋 UAT environment logs..."
-	kubectl logs -l environment=uat --tail=50
+	kubectl logs -n $(NGINX_NAMESPACE) -l environment=uat --tail=50
 
 logs-traefik:
 	@echo "📋 Traefik logs..."
@@ -176,6 +181,8 @@ clean-all: dev-down uat-down clean-hosts
 	@echo "Removing Traefik..."
 	helm uninstall traefik -n $(TRAEFIK_NAMESPACE) --ignore-not-found
 	kubectl delete namespace $(TRAEFIK_NAMESPACE) --ignore-not-found
+	@echo "Removing nginx namespace..."
+	kubectl delete namespace $(NGINX_NAMESPACE) --ignore-not-found
 	@echo "✅ Complete cleanup finished!"
 
 # Development workflow shortcuts
@@ -199,31 +206,31 @@ debug-dev:
 	@echo "🔍 Debugging development environment..."
 	@echo ""
 	@echo "=== Pod Status ==="
-	kubectl get pods -l environment=dev -o wide
+	kubectl get pods -n $(NGINX_NAMESPACE) -l environment=dev -o wide
 	@echo ""
 	@echo "=== Pod Describe ==="
-	kubectl describe pods -l environment=dev
+	kubectl describe pods -n $(NGINX_NAMESPACE) -l environment=dev
 	@echo ""
 	@echo "=== Service Endpoints ==="
-	kubectl get endpoints dev-nginx -o wide
+	kubectl get endpoints -n $(NGINX_NAMESPACE) dev-nginx -o wide
 	@echo ""
 	@echo "=== IngressRoute Details ==="
-	kubectl describe ingressroute dev-nginx-test
+	kubectl describe ingressroute -n $(NGINX_NAMESPACE) dev-nginx-test
 
 debug-uat:
 	@echo "🔍 Debugging UAT environment..."
 	@echo ""
 	@echo "=== Pod Status ==="
-	kubectl get pods -l environment=uat -o wide
+	kubectl get pods -n $(NGINX_NAMESPACE) -l environment=uat -o wide
 	@echo ""
 	@echo "=== Pod Describe ==="
-	kubectl describe pods -l environment=uat
+	kubectl describe pods -n $(NGINX_NAMESPACE) -l environment=uat
 	@echo ""
 	@echo "=== Service Endpoints ==="
-	kubectl get endpoints uat-nginx -o wide
+	kubectl get endpoints -n $(NGINX_NAMESPACE) uat-nginx -o wide
 	@echo ""
 	@echo "=== IngressRoute Details ==="
-	kubectl describe ingressroute uat-nginx-test
+	kubectl describe ingressroute -n $(NGINX_NAMESPACE) uat-nginx-test
 
 # Validation targets
 validate:
