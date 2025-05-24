@@ -1,0 +1,11 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: nginx-test
+spec:
+  routes:
+  - kind: Rule
+    match: Host(`dev-nginx.localhost`)
+    services:
+    - name: dev-nginx
+      port: 80 

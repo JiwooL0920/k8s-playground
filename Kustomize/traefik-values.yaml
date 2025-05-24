@@ -1,0 +1,13 @@
+dashboard:
+  enabled: true
+logs:
+  general:
+    level: INFO  # Set to DEBUG for detailed logging
+  access:
+    enabled: true
+    format: json  # JSON format is easier to parse for detailed analysis
+    fields:
+      headers:
+        defaultmode: keep  # Keep all headers in logs to see Upgrade: websocket
+service:
+  type: NodePort

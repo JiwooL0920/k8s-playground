@@ -1,0 +1,11 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: nginx-test
+spec:
+  routes:
+  - kind: Rule
+    match: Host(`uat-nginx.example.com`)
+    services:
+    - name: uat-nginx
+      port: 80 
