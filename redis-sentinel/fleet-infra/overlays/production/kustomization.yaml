@@ -1,0 +1,28 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Reference to base configuration
+resources:
+- ../../base
+
+# Patch HelmRelease with production-specific values including monitoring
+patches:
+- path: helmrelease-patch.yaml
+
+# Environment-specific labels
+labels:
+- pairs:
+    environment: production
+    tier: production
+
+# Override secret generator for production environment using .env file
+secretGenerator:
+- name: redis-sentinel-password
+  behavior: replace  # Replace the base secret completely
+  envs:
+  - .env  # Load from .env file
+  options:
+    disableNameSuffixHash: true
+
+# Namespace for production environment
+namespace: redis-sentinel-prod 
