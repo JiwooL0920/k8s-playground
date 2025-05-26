@@ -5,9 +5,10 @@ kind: Kustomization
 resources:
 - ../../base
 
-# Patch HelmRelease with develop-specific values
+# Patch HelmRelease and ExternalSecret with develop-specific values
 patches:
 - path: helmrelease-patch.yaml
+- path: externalsecret-patch.yaml
 
 # Environment-specific labels
 labels:
@@ -16,8 +17,8 @@ labels:
     tier: development
     app: elasticsearch
 
-# Note: No secrets needed for development Elasticsearch
-# as security is disabled for simplicity
+# Note: Secrets now managed by External Secrets Operator
+# pointing to AWS Secrets Manager: redis/dev/credentials
 
 # Namespace for develop environment
 namespace: elasticsearch-dev 

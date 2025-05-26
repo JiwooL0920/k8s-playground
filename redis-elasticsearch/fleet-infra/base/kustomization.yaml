@@ -4,17 +4,14 @@ kind: Kustomization
 # Resources to include
 resources:
 - helmrelease.yaml
+- secretstore.yaml
+- externalsecret.yaml
 
-# Secret generators - create secrets from .env files
-secretGenerator:
-- name: redis-sentinel-password
-  literals:
-  - password=PLACEHOLDER_PASSWORD  # This will be overridden in overlays
-  options:
-    disableNameSuffixHash: true
+# Note: Removed secretGenerator as ExternalSecret will create the secret
+# The ExternalSecret will create: redis-sentinel-password
 
 # Common metadata
 labels:
 - pairs:
-    app.kubernetes.io/name: redis-sentinel
-    app.kubernetes.io/part-of: redis-sentinel-cluster 
+    app.kubernetes.io/name: elasticsearch  # Updated for Elasticsearch
+    app.kubernetes.io/part-of: elasticsearch-cluster 

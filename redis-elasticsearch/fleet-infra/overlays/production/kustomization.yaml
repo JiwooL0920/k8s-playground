@@ -16,17 +16,18 @@ labels:
     tier: production
     app: elasticsearch
 
-# Production secrets for Elasticsearch
-secretGenerator:
-- name: elasticsearch-credentials
-  behavior: replace
-  envs:
-  - .env  # Load from .env file (password=your-elastic-password)
-  options:
-    disableNameSuffixHash: true
+# Note: Secrets now managed by External Secrets Operator
+# The ExternalSecret will create:
+# - elasticsearch-credentials (from AWS: elasticsearch/prod/credentials)  
+# - redis-sentinel-password (from AWS: redis/prod/credentials)
 
 # Note: For production, you'll also need to create the elastic-certificates secret manually:
 # kubectl create secret generic elastic-certificates --from-file=elastic-certificates.p12
+
+# Patch ExternalSecret with production-specific values
+patches:
+- path: helmrelease-patch.yaml
+- path: externalsecret-patch.yaml
 
 # Namespace for production environment
 namespace: elasticsearch-prod 

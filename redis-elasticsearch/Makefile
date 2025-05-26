@@ -33,6 +33,11 @@ check-prerequisites: ## Check if required tools are installed
 	@command -v kustomize >/dev/null 2>&1 || echo "⚠️  kustomize not found, using kubectl kustomize"
 	@echo "✅ Prerequisites check passed"
 
+check-external-secrets: ## Check if External Secrets Operator is installed
+	@echo "🔍 Checking External Secrets Operator..."
+	@kubectl get pods -n external-secrets-system >/dev/null 2>&1 || { echo "❌ External Secrets Operator not found. Install it first."; exit 1; }
+	@echo "✅ External Secrets Operator is running"
+
 check-cluster: ## Verify cluster connectivity
 	@echo "🔍 Checking cluster connectivity..."
 	@kubectl cluster-info >/dev/null 2>&1 || { echo "❌ Cannot connect to Kubernetes cluster"; exit 1; }
@@ -56,10 +61,12 @@ check-dev-env: ## Check if development .env file exists
 	fi
 	@echo "✅ Development .env file found"
 
-apply-dev: check-prerequisites check-cluster ## Deploy Elasticsearch to development
+apply-dev: check-prerequisites check-cluster check-external-secrets ## Deploy Elasticsearch to development
 	@echo "🚀 Deploying Elasticsearch to development environment..."
 	@kubectl create namespace $(NAMESPACE_DEV) --dry-run=client -o yaml | kubectl apply -f -
 	@kubectl apply -k $(DEV_OVERLAY)
+	@echo "⏳ Waiting for External Secrets to sync..."
+	@sleep 30
 	@echo "⏳ Waiting for deployment to be ready..."
 	@kubectl wait --for=condition=ready helmrelease elasticsearch -n $(NAMESPACE_DEV) --timeout=600s
 	@echo "✅ Elasticsearch deployed to development"
@@ -241,8 +248,35 @@ describe-prod: check-cluster ## Describe production HelmRelease for troubleshoot
 	@echo "🔍 Describing production HelmRelease..."
 	@kubectl describe helmrelease elasticsearch -n $(NAMESPACE_PROD)
 
+# External Secrets Operations
+install-external-secrets: check-prerequisites check-cluster ## Install External Secrets Operator
+	@echo "🚀 Installing External Secrets Operator..."
+	@helm repo add external-secrets https://charts.external-secrets.io || true
+	@helm repo update
+	@helm upgrade --install external-secrets external-secrets/external-secrets \
+		--version 0.9.11 \
+		--namespace external-secrets-system \
+		--create-namespace \
+		--wait
+	@echo "✅ External Secrets Operator installed"
+
+check-secrets: check-cluster ## Check External Secrets status
+	@echo "🔍 External Secrets Status:"
+	@echo "Development:"
+	@kubectl get externalsecrets,secrets -n $(NAMESPACE_DEV) 2>/dev/null || echo "No secrets found in dev"
+	@echo ""
+	@echo "Production:"
+	@kubectl get externalsecrets,secrets -n $(NAMESPACE_PROD) 2>/dev/null || echo "No secrets found in prod"
+
+force-sync-secrets: check-cluster ## Force refresh of External Secrets
+	@echo "🔄 Force refreshing External Secrets..."
+	@kubectl annotate externalsecret redis-password-external -n $(NAMESPACE_DEV) force-sync=$$(date +%s) 2>/dev/null || echo "Dev not found"
+	@kubectl annotate externalsecret redis-password-external -n $(NAMESPACE_PROD) force-sync=$$(date +%s) 2>/dev/null || echo "Prod not found"
+	@echo "✅ Force sync annotations added"
+
 # Quick Start
-quick-start: install-flux apply-dev ## Quick start: Install Flux and deploy development environment
+quick-start: install-flux install-external-secrets apply-dev ## Quick start: Install Flux, ESO and deploy development environment
 	@echo "🎉 Quick start complete! Elasticsearch is running in development."
 	@echo "💡 Run 'make test-dev' to verify the deployment"
-	@echo "🔗 Run 'make port-forward-dev' to access Elasticsearch on localhost:9200" 
+	@echo "🔗 Run 'make port-forward-dev' to access Elasticsearch on localhost:9200"
+	@echo "🔐 Secrets are managed by External Secrets Operator from AWS Secrets Manager" 
