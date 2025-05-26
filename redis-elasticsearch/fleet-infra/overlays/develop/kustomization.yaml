@@ -1,0 +1,23 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Reference to base configuration
+resources:
+- ../../base
+
+# Patch HelmRelease with develop-specific values
+patches:
+- path: helmrelease-patch.yaml
+
+# Environment-specific labels
+labels:
+- pairs:
+    environment: develop
+    tier: development
+    app: elasticsearch
+
+# Note: No secrets needed for development Elasticsearch
+# as security is disabled for simplicity
+
+# Namespace for develop environment
+namespace: elasticsearch-dev 

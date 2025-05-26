@@ -1,0 +1,97 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: elasticsearch
+spec:
+  targetNamespace: elasticsearch-dev
+  values:
+    # Development environment overrides
+    
+    # Elasticsearch cluster configuration for development
+    clusterName: "elasticsearch-dev-cluster"
+    nodeGroup: "master"
+    
+    # Single node development setup
+    replicas: 1
+    minimumMasterNodes: 1
+    
+    # Development resource limits (lower for cost efficiency)
+    resources:
+      requests:
+        cpu: "50m"
+        memory: "256Mi"
+      limits:
+        cpu: "500m"
+        memory: "1Gi"
+    
+    # JVM heap size for development (smaller)
+    esJavaOpts: "-Xmx512m -Xms512m"
+    
+    # Volume configuration for development (smaller storage)
+    volumeClaimTemplate:
+      accessModes: ["ReadWriteOnce"]
+      storageClassName: ""
+      resources:
+        requests:
+          storage: 5Gi  # Smaller storage for dev
+    
+    # Development elasticsearch configuration
+    esConfig:
+      elasticsearch.yml: |
+        cluster.name: elasticsearch-dev-cluster
+        node.name: "elasticsearch-dev-node"
+        network.host: 0.0.0.0
+        discovery.type: single-node
+        xpack.security.enabled: false
+        xpack.security.transport.ssl.enabled: false
+        xpack.security.http.ssl.enabled: false
+        xpack.ml.enabled: false
+        xpack.monitoring.enabled: false
+        xpack.watcher.enabled: false
+        action.auto_create_index: true
+        # Development logging
+        logger.level: INFO
+        logger.org.elasticsearch.discovery: DEBUG
+    
+    # Disable monitoring in development
+    prometheus:
+      enabled: false
+    
+    # Development service configuration
+    service:
+      type: ClusterIP
+      ports:
+        - name: http
+          port: 9200
+          protocol: TCP
+        - name: transport
+          port: 9300
+          protocol: TCP
+    
+    # Fast startup for development
+    readinessProbe:
+      failureThreshold: 3
+      initialDelaySeconds: 5
+      periodSeconds: 5
+      successThreshold: 1
+      timeoutSeconds: 3
+    
+    # Development anti-affinity (allow single node)
+    antiAffinityTopologyKey: "none"
+    
+    # Development lifecycle hooks
+    lifecycle:
+      postStart:
+        exec:
+          command:
+            - bash
+            - -c
+            - |
+              #!/bin/bash
+              # Wait for Elasticsearch to be ready
+              until curl -s localhost:9200/_cluster/health; do
+                echo "Waiting for Elasticsearch..."
+                sleep 5
+              done
+              echo "Elasticsearch is ready for development!" 

@@ -1,0 +1,8 @@
+# Ignore secret files
+**/.env
+**/*.env
+**/.env.*
+
+# Ignore generated Kustomize outputs
+**/generated/
+**/kustomization-output.yaml 

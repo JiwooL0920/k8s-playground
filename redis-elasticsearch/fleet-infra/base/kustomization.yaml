@@ -1,0 +1,20 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Resources to include
+resources:
+- helmrelease.yaml
+
+# Secret generators - create secrets from .env files
+secretGenerator:
+- name: redis-sentinel-password
+  literals:
+  - password=PLACEHOLDER_PASSWORD  # This will be overridden in overlays
+  options:
+    disableNameSuffixHash: true
+
+# Common metadata
+labels:
+- pairs:
+    app.kubernetes.io/name: redis-sentinel
+    app.kubernetes.io/part-of: redis-sentinel-cluster 

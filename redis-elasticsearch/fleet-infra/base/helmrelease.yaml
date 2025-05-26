@@ -1,0 +1,105 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: elasticsearch
+spec:
+  type: default
+  interval: 5m
+  url: https://helm.elastic.co
+
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: elasticsearch
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: elasticsearch
+      reconcileStrategy: Revision
+      version: "8.5.1"  # Pin to specific version for stability
+      sourceRef:
+        kind: HelmRepository
+        name: elasticsearch
+  values:
+    # Elasticsearch cluster configuration
+    clusterName: "elasticsearch-cluster"
+    nodeGroup: "master"
+    
+    # Master nodes configuration
+    roles:
+      master: "true"
+      ingest: "true"
+      data: "true"
+      remote_cluster_client: "true"
+      ml: "false"
+    
+    # Replica configuration
+    replicas: 1  # Will be overridden in overlays
+    minimumMasterNodes: 1
+    
+    # Authentication and Security
+    esConfig:
+      elasticsearch.yml: |
+        xpack.security.enabled: false
+        xpack.security.transport.ssl.enabled: false
+        xpack.security.http.ssl.enabled: false
+    
+    # Resource configuration
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "512Mi"
+      limits:
+        cpu: "1000m"
+        memory: "2Gi"
+    
+    # Volume configuration  
+    volumeClaimTemplate:
+      accessModes: ["ReadWriteOnce"]
+      storageClassName: ""
+      resources:
+        requests:
+          storage: 10Gi
+    
+    # Service configuration
+    service:
+      type: ClusterIP
+      ports:
+        - name: http
+          port: 9200
+          protocol: TCP
+        - name: transport
+          port: 9300
+          protocol: TCP
+    
+    # Ingress configuration (disabled by default)
+    ingress:
+      enabled: false
+    
+    # Health checks
+    readinessProbe:
+      failureThreshold: 3
+      initialDelaySeconds: 10
+      periodSeconds: 10
+      successThreshold: 3
+      timeoutSeconds: 5
+    
+    # JVM heap size
+    esJavaOpts: "-Xmx1g -Xms1g"
+    
+    # Lifecycle management
+    lifecycle: {}
+    
+    # Pod Disruption Budget
+    maxUnavailable: 1
+    
+    # Security Context
+    fsGroup: 1000
+    runAsUser: 1000
+    
+    # Metrics configuration (optional)
+    prometheus:
+      enabled: false  # Will be overridden in overlays that need monitoring

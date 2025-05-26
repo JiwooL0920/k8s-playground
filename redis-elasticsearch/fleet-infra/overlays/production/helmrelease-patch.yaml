@@ -1,0 +1,166 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: elasticsearch
+spec:
+  targetNamespace: elasticsearch-prod
+  values:
+    # Production environment overrides
+    
+    # Elasticsearch cluster configuration for production
+    clusterName: "elasticsearch-prod-cluster"
+    nodeGroup: "master"
+    
+    # Production multi-node setup
+    replicas: 3  # High availability with 3 nodes
+    minimumMasterNodes: 2  # Quorum for production
+    
+    # Production resource allocation
+    resources:
+      requests:
+        cpu: "500m"
+        memory: "2Gi"
+      limits:
+        cpu: "2000m"
+        memory: "4Gi"
+    
+    # JVM heap size for production (larger)
+    esJavaOpts: "-Xmx2g -Xms2g"
+    
+    # Volume configuration for production (larger storage)
+    volumeClaimTemplate:
+      accessModes: ["ReadWriteOnce"]
+      storageClassName: ""  # Use default storage class
+      resources:
+        requests:
+          storage: 50Gi  # Larger storage for production
+    
+    # Production elasticsearch configuration
+    esConfig:
+      elasticsearch.yml: |
+        cluster.name: elasticsearch-prod-cluster
+        node.name: "${HOSTNAME}"
+        network.host: 0.0.0.0
+        discovery.seed_hosts: ["elasticsearch-prod-cluster-master-headless"]
+        cluster.initial_master_nodes: ["elasticsearch-prod-cluster-master-0", "elasticsearch-prod-cluster-master-1", "elasticsearch-prod-cluster-master-2"]
+        # Security configuration
+        xpack.security.enabled: true
+        xpack.security.transport.ssl.enabled: true
+        xpack.security.transport.ssl.verification_mode: certificate
+        xpack.security.transport.ssl.keystore.path: /usr/share/elasticsearch/config/certs/elastic-certificates.p12
+        xpack.security.transport.ssl.truststore.path: /usr/share/elasticsearch/config/certs/elastic-certificates.p12
+        # Monitoring and management
+        xpack.monitoring.enabled: true
+        xpack.monitoring.collection.enabled: true
+        # Performance settings
+        indices.memory.index_buffer_size: 10%
+        indices.queries.cache.size: 10%
+        thread_pool.write.queue_size: 1000
+        # Production logging
+        logger.level: WARN
+        logger.org.elasticsearch.discovery: INFO
+    
+    # Enable monitoring in production
+    prometheus:
+      enabled: true
+    
+    # Production service configuration
+    service:
+      type: ClusterIP
+      ports:
+        - name: http
+          port: 9200
+          protocol: TCP
+        - name: transport
+          port: 9300
+          protocol: TCP
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9114"
+    
+    # Production readiness and liveness probes
+    readinessProbe:
+      failureThreshold: 3
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      successThreshold: 3
+      timeoutSeconds: 5
+      httpGet:
+        path: /_cluster/health?local=true
+        port: 9200
+        scheme: HTTP
+    
+    livenessProbe:
+      failureThreshold: 3
+      initialDelaySeconds: 60
+      periodSeconds: 30
+      successThreshold: 1
+      timeoutSeconds: 5
+      httpGet:
+        path: /_cluster/health?local=true
+        port: 9200
+        scheme: HTTP
+    
+    # Anti-affinity for high availability
+    antiAffinityTopologyKey: "kubernetes.io/hostname"
+    antiAffinity: "hard"
+    
+    # Pod Disruption Budget for production
+    maxUnavailable: 1
+    
+    # Production security context
+    securityContext:
+      fsGroup: 1000
+      runAsUser: 1000
+      runAsNonRoot: true
+    
+    # Production lifecycle hooks
+    lifecycle:
+      preStop:
+        exec:
+          command:
+            - bash
+            - -c
+            - |
+              #!/bin/bash
+              # Graceful shutdown
+              curl -X POST "localhost:9200/_cluster/nodes/_local/_shutdown"
+              sleep 10
+    
+    # Production extra volumes for certificates
+    extraVolumes:
+      - name: elastic-certificates
+        secret:
+          secretName: elastic-certificates
+    
+    extraVolumeMounts:
+      - name: elastic-certificates
+        mountPath: /usr/share/elasticsearch/config/certs
+        readOnly: true
+    
+    # Production node affinity (prefer different zones)
+    nodeAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 1
+        preference:
+          matchExpressions:
+          - key: topology.kubernetes.io/zone
+            operator: In
+            values:
+            - zone-a
+            - zone-b
+            - zone-c
+    
+    # Production tolerations
+    tolerations: []
+    
+    # Production environment variables
+    extraEnvs:
+      - name: ELASTIC_PASSWORD
+        valueFrom:
+          secretKeyRef:
+            name: elasticsearch-credentials
+            key: password
+      - name: bootstrap.password
+        value: "${ELASTIC_PASSWORD}" 
