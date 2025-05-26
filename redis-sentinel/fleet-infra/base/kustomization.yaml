@@ -4,6 +4,7 @@ kind: Kustomization
 # Resources to include
 resources:
 - helmrelease.yaml
+- redis-database-config.yaml
 
 # Secret generators - create secrets from .env files
 secretGenerator:

@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: redis-database-config
+  namespace: redis-sentinel-prod
+data:
+  # Database assignments
+  THANOS_REDIS_DB: "0"
+  LOKI_RESULTS_CACHE_DB: "2"
+  LOKI_CHUNK_CACHE_DB: "3"
+  LOKI_WRITE_DEDUPE_DB: "4"
+  LOKI_INDEX_CACHE_DB: "5"
+  ONEAI_REDIS_DB: "6"
+  
+  # Service discovery
+  REDIS_MASTER_HOST: "redis-sentinel-master"
+  REDIS_REPLICA_HOST: "redis-sentinel-replica"
+  REDIS_SENTINEL_HOST: "redis-sentinel"
+  REDIS_PORT: "6379"
+  REDIS_SENTINEL_PORT: "26379"
+  REDIS_MASTER_SET: "mymaster"
+  
+  # Connection templates
+  THANOS_REDIS_URL: "redis://redis-sentinel-master:6379/0"
+  LOKI_RESULTS_CACHE_URL: "redis://redis-sentinel-master:6379/2"
+  LOKI_CHUNK_CACHE_URL: "redis://redis-sentinel-master:6379/3"
+  LOKI_WRITE_DEDUPE_URL: "redis://redis-sentinel-master:6379/4"
+  LOKI_INDEX_CACHE_URL: "redis://redis-sentinel-master:6379/5"
+  ONEAI_REDIS_URL: "redis://redis-sentinel-master:6379/6"

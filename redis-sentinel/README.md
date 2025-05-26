@@ -6,6 +6,7 @@ A production-ready Redis Sentinel deployment using GitOps with Flux CD, featurin
 
 - [Overview](#overview)
 - [Repository Structure](#repository-structure)
+- [Database Allocation](#database-allocation)
 - [HelmRelease Configuration](#helmrelease-configuration)
 - [Deployed Resources](#deployed-resources)
 - [Prerequisites](#prerequisites)
@@ -49,9 +50,31 @@ Redis-Sentinel/fleet-infra/
 ### Key Files Explained
 
 - **`base/helmrelease.yaml`**: Contains both HelmRepository and HelmRelease CRDs
-- **`.env` files**: Store Redis passwords securely (gitignored)
-- **`helmrelease-patch.yaml`**: Environment-specific Helm value overrides
-- **`kustomization.yaml`**: Kustomize manifests with secret generation
+
+## 💾 Database Allocation
+
+This Redis cluster supports multiple logical databases for different services:
+
+| Database | Service | Purpose | Connection Example |
+|----------|---------|---------|-------------------|
+| DB 0 | Thanos Query Frontend | Query result caching | `redis://redis-sentinel-master:6379/0` |
+| DB 2 | Loki | Results cache | `redis://redis-sentinel-master:6379/2` |
+| DB 3 | Loki | Chunk cache | `redis://redis-sentinel-master:6379/3` |
+| DB 4 | Loki | Write dedupe cache | `redis://redis-sentinel-master:6379/4` |
+| DB 5 | Loki | Index cache | `redis://redis-sentinel-master:6379/5` |
+| DB 6 | OneAI | Microservices cache | `redis://redis-sentinel-master:6379/6` |
+
+### Quick Database Testing
+```bash
+# Verify database isolation
+./scripts/verify-databases.sh
+
+# Manual testing
+kubectl exec -it redis-sentinel-master-0 -n redis-sentinel-prod -- \
+  redis-cli -a $REDIS_PASSWORD -n 0 ping
+```
+
+**📚 Detailed Setup**: See [database-allocation.md](database-allocation.md) and [service-connection-examples.md](service-connection-examples.md) for complete configuration guides.
 
 ## ⚙️ HelmRelease Configuration
 
@@ -889,8 +912,3 @@ kubectl get pv,pvc -n redis-sentinel-dev
 ```
 
 ---
-
-**Maintained by**: Your Team  
-**Last Updated**: $(date +"%Y-%m-%d")  
-**Flux Version**: v2.5.1  
-**Chart Version**: redis-21.1.7 
